@@ -1,6 +1,7 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef} from "react";
 import Avatar from "./Avatar";
 import { UserContext } from "./UserContext";
+import {uniqBy} from "lodash";
 
 
 export default function Chat(){
@@ -10,6 +11,7 @@ export default function Chat(){
     const [newMessageText, setnewMessageText] = useState('');
     const [messages, setMessages] = useState([]);
     const {username, id} = useContext(UserContext);
+    const divUnderMessages = useRef();
     
     useEffect(() => {
         const ws = new WebSocket('ws://localhost:4000');
@@ -29,7 +31,7 @@ export default function Chat(){
         if ('online' in messageData){
             showOnlinePeople(messageData.online);
         }else if ('text' in messageData){
-            setMessages(prev => ([...prev,{isOur:false, text:messageData.text}]));
+            setMessages(prev => ([...prev,{...messageData}]));
         }
     }
 
@@ -42,11 +44,21 @@ export default function Chat(){
         }));
 
         setnewMessageText('');
-        setMessages(prev =>([...prev,{text: newMessageText, isOur:true}]));
+        setMessages(prev =>([...prev,{
+            text: newMessageText, 
+            sender:id,
+            recipient: selectedUserId,
+            id: Date.now(),
+        }]));
+        const div = divUnderMessages.current;
+        div.scrollIntoView({behavior:'smooth'});
     }
-   
+    
     const onlinePeopleExclOurUser = {...onlinePeople};
     delete onlinePeopleExclOurUser[id];
+    
+    //we found out our message will always duplicate, this function help solves the problem
+    const messageWithoutDupes = uniqBy(messages, 'id');
 
     return(
         <div className="flex h-screen">
@@ -81,11 +93,22 @@ export default function Chat(){
                         </div>
                     )}
                     {!!selectedUserId &&(
-                        <div>
-                            {messages.map(message =>(
-                                <div>{message.text}</div>
-                            ))}
+                        <div className="relative h-full">
+                            <div  className="overflow-y-scroll absolute inset-0">
+                                {messageWithoutDupes.map(message =>(
+                                    <div className={(message.sender === id ? 'text-right' : 'text-left')}> 
+                                        <div className={"inline-block p-2 m-2 rounded-md text-sm "+ (message.sender ===id ? 'bg-blue-500 text-white': 'bg-white text-gray-500') }> 
+                                            sender: {message.sender}<br/>
+                                            my id: {id}<br/>
+                                            {message.text}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div ref={divUnderMessages}></div>
+                            </div>
+
                         </div>
+                        
                     )}
                 </div>
                 {!!selectedUserId && (
