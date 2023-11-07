@@ -30,9 +30,42 @@ app.use(cors({
     origin: process.env.CLIENT_URL,
 }));
 
+async function getUserDataFromRequest(req){
+    return new Promise((resolve, reject) => {
+        const token = req.cookies?.token;
+        if (token){
+            jwt.verify(token,jwtSecret,{},(err,userData)=>{
+                if (err) throw err;
+                resolve(userData);
+            });
+        } else{
+            reject('no token');
+        }
+    });
+    
+}
 
 app.get('/test', (req,res)=>{
     res.json('test ok');
+});
+
+app.get('/messages/:userId', async (req,res)=>{
+    const {userId} = req.params;
+    const userData = await getUserDataFromRequest(req);
+    const ourUserId = userData.userId;
+    const messages = await Message.find({
+        sender: {$in:[userId,ourUserId]},
+        recipient : {$in:[userId,ourUserId]}
+    }).sort({createdAt: 1}); 
+    //either we are the sender or we are the recipient
+    res.json(messages);
+
+});
+
+//get all people
+app.get('/people', async (req,res)=>{
+    const users = await User.find({},{'_id':1,username:1});
+    res.json(users);
 });
 
 app.get('/profile', (req,res)=>{
@@ -64,6 +97,10 @@ app.post('/login', async (req,res) =>{
         }
     }
 });
+
+app.post('/logout', (req,res)=>{
+    res.cookie('token','',{sameSite:'none',secure: true}).json('ok');
+});
 //creating the user
 app.post('/register', async (req,res)=>{
     const {username,password} = req.body;
@@ -91,6 +128,31 @@ const server = app.listen(4000);
 //webSocket Server
 const wss = new ws.WebSocketServer({server});
 wss.on('connection',(connection, req)=>{
+
+    function notifyAboutOnlinePeople(){
+        [...wss.clients].forEach(client =>{
+            client.send(JSON.stringify({
+                online: [...wss.clients].map(c => ({userId:c.userId,username:c.username}))
+            }));
+        });
+    }
+
+    connection.isAlive = true;
+    //killing old connection
+    connection.timer = setInterval(()=>{
+        connection.ping();
+        connection.deathTimer = setTimeout(()=>{
+            connection.isAlive= false;
+            clearInterval(connection.timer);
+            connection.terminate();
+            notifyAboutOnlinePeople(); //update online status
+            // console.log('death');
+        },1000);
+    },5000);
+
+    connection.on('pong',()=>{
+        clearTimeout(connection.deathTimer);
+    })
     //read username and id from the cookir for this connection
     const cookies = req.headers.cookie;
     if (cookies){
@@ -122,17 +184,17 @@ wss.on('connection',(connection, req)=>{
                 text,
                 sender:connection.userId,
                 recipient,
-                id: messageDoc._id,
+                _id: messageDoc._id,
             })));
         }
     });
     // console.log([...wss.clients].map(c => c.username));
     //notify everyone about online people(when someone connects)
-    [...wss.clients].forEach(client =>{
-        client.send(JSON.stringify({
-            online: [...wss.clients].map(c => ({userId:c.userId,username:c.username}))
-        }));
-    });
+    notifyAboutOnlinePeople();
+
+});
+
+wss.on('close' , data =>{
 
 });
 
