@@ -1,6 +1,6 @@
-# MERN Stack Real-Time Chat Application
+# MERN Real-Time Chat Application
 
-Welcome to the MERN Stack Real-Time Chat Application, a real-time chat application that's designed to enhance your communication experience, using the MERN stack (**MongoDB, Express.js, React, and Node.js**) and integrated WebSocket technology for instantaneous message delivery. This chat application enables users to seamlessly connect, chat, and exchange messages in real-time. Our user interface is designed with interactivity in mind, leveraging React, while the backend server infrastructure, built with Express.js and Node.js, ensures a user-friendly and engaging experience. 
+Welcome to the MERN Real-Time Chat Application, a real-time chat application that's designed to enhance your communication experience, using the MERN stack (**MongoDB, Express.js, React, and Node.js**) and integrated WebSocket technology for instantaneous message delivery. This chat application enables users to seamlessly connect, chat, and exchange messages in real-time. Our user interface is designed with interactivity in mind, leveraging React, while the backend server infrastructure, built with Express.js and Node.js, ensures a user-friendly and engaging experience. 
 
 
 
